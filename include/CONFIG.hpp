@@ -20,7 +20,7 @@
 #define PRESS_SENSOR_1_PIN 33 // First sensor connected to GPIO 33
 #define PRESS_SENSOR_2_PIN 32 // Second sensor connected to GPIO 32
 
-// Define the payload structure for both joysticks
+// Define the payload structure for the controller
 struct Payload {
   int16_t joy1X;
   int16_t joy1Y;
