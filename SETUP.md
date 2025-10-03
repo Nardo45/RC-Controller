@@ -1,76 +1,176 @@
-## Quick start — prerequisites
+# Quick start — prerequisites
 
-- **Option A (PlatformIO, recommended):** VSCode + PlatformIO extension.
-- **Option B (Arduino IDE):** Arduino IDE 1.8+/Arduino CLI with ESP32 board package installed.
-- **Libraries:** `RF24` by nRF24 (also available via PlatformIO Library Manager or Arduino Library Manager).
+- **PlatformIO (required)** — either:
+  - **PlatformIO IDE for VSCode** (recommended for a friendly UI), or  
+  - **PlatformIO Core (CLI)** for command-line usage (works on Linux / macOS / Windows / ARM).
+- **Libraries:** `RF24` (available via PlatformIO Library Manager as `nrf24/RF24`).
 - **Hardware:** ESP32 module (ESP32-WROOM-32D recommended), nRF24L01 module, joysticks, pressure sensors, wiring and power supply.
 
 ---
 
-## PlatformIO setup (recommended)
+## Install PlatformIO
 
-1. Install VSCode and the PlatformIO extension.
-2. Clone the repository:
+### Option 1 — VSCode + PlatformIO IDE (easy GUI)
+1. Install Visual Studio Code.
+2. Open Extensions → search for **PlatformIO IDE** and install. PlatformIO IDE bundles PlatformIO Core so no separate Core install is required. :contentReference[oaicite:0]{index=0}
+
+### Option 2 — PlatformIO Core (CLI)
+If you prefer working in a terminal (or using CI), install PlatformIO Core. Two common methods:
+
+- **Installer script (recommended)** — creates an isolated environment for PlatformIO Core (avoids system Python issues). See the installer repo/docs. Example usage:
+
+```bash
+# download installer script and run with python3
+curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py
+python3 get-platformio.py
+````
+
+* **pip (PyPI)** — installs platformio into your Python environment:
+
+```bash
+python3 -m pip install -U platformio
+```
+
+After install, verify:
+
+```bash
+pio --version
+```
+
+(Official docs: installation and pip instructions). ([GitHub][1])
+
+---
+
+## Clone the repo
 
 ```bash
 git clone https://github.com/Nardo45/RC-Controller.git
 cd RC-Controller
 ```
 
-3. Example `platformio.ini` (put this in the repo root if not present, upload\_port depends on your system):
+---
+
+## `platformio.ini` (project config)
+
+Place this file at the repository root (you already have one — confirm it contains the right settings). Example (yours):
 
 ```ini
+; PlatformIO Project Configuration File
+
 [env:esp32doit-devkit-v1]
 platform = espressif32
 board = esp32doit-devkit-v1
 framework = arduino
-upload_port = COM4
+upload_port = COM4    ; Depends on your system (optional — PlatformIO can auto-detect)
 monitor_speed = 115200
 lib_deps = nrf24/RF24@^1.4.11
 ```
 
-4. Open the project in VSCode (PlatformIO will detect the `platformio.ini`). Select the `esp32dev` environment and click **Upload**.
+Notes:
+
+* `framework = arduino` means the ESP32 Arduino core is used as the runtime, but **this does not require the Arduino IDE** — PlatformIO handles the toolchain and library installation. ([docs.platformio.org][2])
+* Remove or change `upload_port` if you prefer auto-detection, or set it to `/dev/ttyUSB0` (Linux) or `COM3` (Windows) for your environment.
 
 ---
 
-## Arduino IDE setup
+## Build & flash (examples)
 
-1. Install the ESP32 board support: open Boards Manager and install `esp32` (Espressif Systems).
-2. Install the `RF24` library via Library Manager.
-3. Open the `.ino` or main sketch file (if your project uses a `.cpp`/`.h` structure, open the top-level `.ino` that includes them or use `Sketch > Add File...`).
-4. Select the correct ESP32 board and COM port, then upload.
+### Using VSCode (PlatformIO IDE)
+
+* Open the project folder in VSCode. PlatformIO will detect `platformio.ini`.
+* Use the PlatformIO toolbar or the left-side PlatformIO panel to **Build**, **Upload**, and open the **Serial Monitor**.
+
+### Using the CLI (PlatformIO Core)
+
+From the repo root:
+
+```bash
+# build (default environment)
+pio run
+
+# build and upload to board (auto-detects port if not set)
+pio run -t upload
+
+# target a named environment (if you have multiple environments)
+pio run -e esp32doit-devkit-v1 -t upload
+```
+
+Helpful device/monitor commands:
+
+```bash
+# list connected devices / serial ports
+pio device list
+
+# open serial monitor (auto-detects port and uses monitor_speed)
+pio device monitor --baud 115200
+# or explicitly:
+pio device monitor -p /dev/ttyUSB0 -b 115200
+```
+
+(PlatformIO CLI docs: build/upload/monitor commands). ([docs.platformio.org][3])
 
 ---
 
 ## Configure and flash
 
-1. Double-check the pin assignments in `include/CONFIG.hpp` to match your wiring.
-2. Confirm the nRF24L01 address (`const byte address[6] = "9TfT0"`) and set the same address on your receiver.
-3. Flash the firmware.
+1. Edit `include/CONFIG.hpp` to match your wiring and pin choices.
+2. Confirm the nRF24L01 radio address (e.g. `const byte address[6] = "9TfT0"`) and set the same address on the receiver.
+3. Build and upload using VSCode PlatformIO or the CLI (`pio run -t upload`).
 
 ---
 
-## Serial monitor
+## Serial monitor & debugging
 
-- Open the serial monitor at **115200** baud to view startup logs and debug prints. (The repo initializes `Serial.begin(115200)`.)
+* Open the serial monitor at **115200** to view boot logs and debug output.
+* If the port is not detected automatically, use `pio device list` to find the correct device name and pass `-p` to `pio device monitor`.
 
 ---
 
 ## Calibration & testing
 
-- Confirm joystick movement is mapped to changing analog values in serial prints (add `Serial.println()` temporarily inside `joystickHandler` or `loop`).
-- Check pressure sensors respond to applied force and produce varying readings.
+* Add temporary `Serial.println()` calls in `joystickHandler` or `loop` to verify analog mappings.
+* Verify pressure sensors change readings when force is applied.
 
 ---
 
 ## Notes & hardware tips
 
-- nRF24L01 modules are power-hungry during transmissions; add a 10µF–47µF electrolytic capacitor close to the Vcc and GND pins of the module to stabilize the supply.
-- Use short runs of wire for analog signals to reduce noise.
-- If you plan to support other ESP32 modules, document the pin differences in `CONFIG.hpp`.
+* nRF24L01 modules require a stable 3.3V supply during TX bursts — add a 10µF–47µF electrolytic capacitor close to the module Vcc and GND pins.
+* Keep analog signal wiring short to reduce noise.
+* If you want to support other ESP32 modules, document alternate pin assignments in `CONFIG.hpp`.
 
 ---
 
 ## Receiver
 
-- Writing a compatible receiver that reads `sizeof(Payload)` into a matching struct and parses the values is the simplest approach. Ensure the radio address and radio settings (data rate, power level) match on both ends.
+* Implement a receiver that reads `sizeof(Payload)` into the same struct layout you use on the controller and parse fields accordingly.
+* Make sure radio settings (address, data rate, power level) match on both ends.
+
+---
+
+## Troubleshooting
+
+* If PlatformIO fails to install components inside VSCode, open the PlatformIO terminal (View → Terminal) and try `pio update` or install PlatformIO Core manually (see **Option 2**). ([PlatformIO Community][4])
+* If upload fails with `No such file` or `device busy`, check that no other application (e.g., serial terminal) is holding the port, and that you selected the correct board environment in `platformio.ini`.
+
+---
+
+## Appendix — Useful CLI commands (quick list)
+
+```bash
+pio --version
+pio run
+pio run -t upload
+pio run -e <env> -t upload
+pio device list
+pio device monitor -p <port> -b 115200
+pio lib install "nrf24/RF24"
+```
+
+(See PlatformIO docs for more advanced options and CI integration). ([docs.platformio.org][5])
+
+[1]: https://github.com/platformio/platformio-core-installer?utm_source=chatgpt.com "PlatformIO Core Installer"
+[2]: https://docs.platformio.org/en/latest/core/installation/index.html?utm_source=chatgpt.com "Installation — PlatformIO latest documentation"
+[3]: https://docs.platformio.org/en/latest/core/userguide/project/cmd_init.html?utm_source=chatgpt.com "pio project init — PlatformIO latest documentation"
+[4]: https://community.platformio.org/t/installation-of-platformio-in-vs-code-problem/46656?utm_source=chatgpt.com "Installation of PlatformIO in VS Code problem"
+[5]: https://docs.platformio.org/en/latest/core/userguide/index.html?utm_source=chatgpt.com "CLI Guide — PlatformIO latest documentation"
